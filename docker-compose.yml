@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: ecommerce_postgres
+    restart: always
+    environment:
+      # feel free to change these values
+      POSTGRES_USER: deep 
+      POSTGRES_PASSWORD: notsosecure 
+      POSTGRES_DB: ecommerce_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

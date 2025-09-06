@@ -1,4 +1,11 @@
-import { varchar, uuid, pgTable, boolean, pgEnum } from 'drizzle-orm/pg-core'
+import {
+  varchar,
+  uuid,
+  pgTable,
+  boolean,
+  pgEnum,
+  timestamp,
+} from 'drizzle-orm/pg-core'
 
 // users enum
 export const userRoleEnum = pgEnum('user_role', ['ADMIN', 'SELLER', 'CUSTOMER'])
@@ -9,8 +16,17 @@ export const users = pgTable('users', {
   firstName: varchar('first_name', { length: 255 }).notNull(),
   lastName: varchar('last_name', { length: 255 }),
   email: varchar('email', { length: 255 }).notNull().unique(),
-  password: varchar('password', { length: 25 }).notNull(),
+  password: varchar('password', { length: 255 }).notNull(),
   role: userRoleEnum().default('CUSTOMER').notNull(),
   isVerified: boolean('is_verified').default(false).notNull(),
   verificationToken: varchar('verification_token', { length: 255 }),
+  sellerRequestPending: boolean('seller_request_pending')
+    .default(false)
+    .notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 })

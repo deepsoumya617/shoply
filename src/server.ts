@@ -16,7 +16,7 @@ async function startServer() {
   app.listen(env.PORT, () => {
     console.log(`Server is running on port http://localhost:${env.PORT}`)
   })
-}feat(server): add express, cors, and helmet middleware; configure database connection
+}
 
 
 startServer()

@@ -20,5 +20,10 @@ services:
     ports:
       - '6379:6379'
 
+  api:
+    build: .
+    container_name: ecommerce_api
+    
+
 volumes:
   postgres_data:

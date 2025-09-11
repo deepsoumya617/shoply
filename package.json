@@ -15,7 +15,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.6.3",
+  "packageManager": "pnpm@10.15.1",
   "dependencies": {
     "bcrypt": "^6.0.0",
     "bullmq": "^5.58.5",

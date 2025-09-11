@@ -7,7 +7,7 @@ const emailWorker = new Worker(
   'email',
   async (job: Job) => {
     if (job.name === 'send-verification-email') {
-      const verifyURL = `${env.APP_URL}/api/v1/auth/verify-email?token=${encodeURIComponent(job.data.token)}`
+      const verifyURL = `${env.APP_URL}/api/auth/verify-email?token=${encodeURIComponent(job.data.token)}`
       const html = `
         <p>Hi,</p>
         <p>Click to verify your email:</p>

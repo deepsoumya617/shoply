@@ -3,6 +3,7 @@ import {
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
+  resetPasswordSchema,
 } from './auth.schema'
 import { db } from '../../config/db'
 import { and, eq } from 'drizzle-orm'
@@ -93,13 +94,13 @@ export async function verifyEmail(req: Request, res: Response) {
     // user not found or token mismatch
     if (!user) {
       return res
-        .status(400)
+        .status(401)
         .json({ message: 'Invalid token or user not found' })
     }
 
     // check if user is already verified
     if (user.isVerified) {
-      return res.status(400).json({ message: 'User is already verified' })
+      return res.status(401).json({ message: 'User is already verified' })
     }
 
     // update user verification status
@@ -200,8 +201,15 @@ export async function forgotPassword(req: Request, res: Response) {
         .json({ message: `user with ${email} doesnt exist!` })
     }
 
+    // user not verified
+    if (!user.isVerified) {
+      return res
+        .status(401)
+        .json({ message: 'Please verify your email first!' })
+    }
+
     // generate token to reset password
-    const token = generateToken({ email }, 'reset-password')
+    const token = generateToken({ userId: user.id }, 'reset-password')
 
     // send mail through workers
     await enqueueForgotPasswordEmail({ email, token })
@@ -211,6 +219,63 @@ export async function forgotPassword(req: Request, res: Response) {
     })
   } catch (error) {
     console.error('Forgot password error:', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+// reset password
+export async function resetPassword(req: Request, res: Response) {
+  const { token } = req.query
+  const result = resetPasswordSchema.safeParse(req.body)
+
+  if (!result.success) {
+    console.log('Input validation failed: ', result.error)
+    return res.status(403).json({
+      status: 'failed',
+      message: 'Invalid input data. Please check and try again.',
+    })
+  }
+
+  if (!token || typeof token !== 'string') {
+    return res.status(400).json({ message: 'Invalid or missing token' })
+  }
+
+  const { password } = result.data
+
+  try {
+    const decodedToken = verifyToken<{ userId: string }>(token)
+    const { userId } = decodedToken
+
+    // find user by id
+    const [user] = await db.select().from(users).where(eq(users.id, userId))
+
+    // user doesnt exist
+    if (!user) {
+      return res.status(401).json({
+        message: 'User doesnt exist!',
+      })
+    }
+
+    // user not verified
+    if (!user.isVerified) {
+      return res
+        .status(401)
+        .json({ message: 'Please verify your email first!' })
+    }
+
+    // update password
+    const hashedPassword = await hashPassword(password)
+
+    await db
+      .update(users)
+      .set({
+        password: hashedPassword,
+      })
+      .where(eq(users.id, userId))
+
+    res.status(201).json({ message: 'password updated succesfully!' })
+  } catch (error) {
+    console.log('Reset password error:', error)
     res.status(500).json({ message: 'Internal server error' })
   }
 }

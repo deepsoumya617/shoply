@@ -24,3 +24,14 @@ export async function enqueueLoginEmail(payload: {
 }) {
   await emailQueue.add('send-login-email', payload, DEFAULT_JOB_OPTIONS)
 }
+
+export async function enqueueForgotPasswordEmail(payload: {
+  email: string
+  token: string
+}) {
+  await emailQueue.add(
+    'send-forgotPassword-email',
+    payload,
+    DEFAULT_JOB_OPTIONS
+  )
+}

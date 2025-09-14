@@ -1,11 +1,16 @@
 import { Request, Response } from 'express'
-import { loginSchema, registerSchema } from './auth.schema'
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  registerSchema,
+} from './auth.schema'
 import { db } from '../../config/db'
 import { and, eq } from 'drizzle-orm'
 import { users } from '../../db/schema'
 import { comparePassword, hashPassword } from '../../utils/bcrypt'
 import { generateToken, verifyToken } from '../../utils/jwt'
 import {
+  enqueueForgotPasswordEmail,
   enqueueLoginEmail,
   enqueueVerificationEmail,
 } from '../../jobs/email.queue'
@@ -167,6 +172,45 @@ export async function loginUser(req: Request, res: Response) {
     })
   } catch (error) {
     console.error('Login error:', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+// forget password
+export async function forgotPassword(req: Request, res: Response) {
+  const result = forgotPasswordSchema.safeParse(req.body)
+
+  // validate
+  if (!result.success) {
+    console.log('Input validation failed: ', result.error)
+    return res.status(403).json({
+      status: 'failed',
+      message: 'Invalid input data. Please check and try again.',
+    })
+  }
+
+  const { email } = result.data
+
+  try {
+    const [user] = await db.select().from(users).where(eq(users.email, email))
+
+    if (!user) {
+      return res
+        .status(401)
+        .json({ message: `user with ${email} doesnt exist!` })
+    }
+
+    // generate token to reset password
+    const token = generateToken({ email }, 'reset-password')
+
+    // send mail through workers
+    await enqueueForgotPasswordEmail({ email, token })
+
+    res.status(200).json({
+      message: 'Reset password email sent successfully',
+    })
+  } catch (error) {
+    console.error('Forgot password error:', error)
     res.status(500).json({ message: 'Internal server error' })
   }
 }

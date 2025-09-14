@@ -34,7 +34,7 @@ const emailWorker = new Worker(
 
     if (job.name === 'send-forgotPassword-email') {
       const resetPasswordURL = `${env.APP_URL}/api/auth/reset-password?token=${encodeURIComponent(job.data.token)}`
-      
+
       const html = `
         <p>Hi,</p>
         <p>Click here to reset your password:</p>
@@ -43,6 +43,8 @@ const emailWorker = new Worker(
       `
 
       await sendMail({ to: job.data.email, subject: 'Reset Password', html })
+
+      return { status: 'success' }
     }
 
     // unknown job

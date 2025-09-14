@@ -1,11 +1,14 @@
 import { Request, Response } from 'express'
-import { registerSchema } from './auth.schema'
+import { loginSchema, registerSchema } from './auth.schema'
 import { db } from '../../config/db'
 import { and, eq } from 'drizzle-orm'
 import { users } from '../../db/schema'
-import { hashPassword } from '../../utils/bcrypt'
+import { comparePassword, hashPassword } from '../../utils/bcrypt'
 import { generateToken, verifyToken } from '../../utils/jwt'
-import { enqueueVerificationEmail } from '../../jobs/email.queue'
+import {
+  enqueueLoginEmail,
+  enqueueVerificationEmail,
+} from '../../jobs/email.queue'
 
 // register user
 export async function registerUser(req: Request, res: Response) {
@@ -103,6 +106,67 @@ export async function verifyEmail(req: Request, res: Response) {
     res.status(200).json({ message: 'Email verified successfully' })
   } catch (error) {
     console.log('Email verification error:', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+// login user
+export async function loginUser(req: Request, res: Response) {
+  const result = loginSchema.safeParse(req.body)
+
+  if (!result.success) {
+    console.log('Input validation failed: ', result.error)
+    return res.status(403).json({
+      status: 'failed',
+      message: 'Invalid input data. Please check and try again.',
+    })
+  }
+
+  const { email, password } = result.data
+
+  try {
+    const [user] = await db.select().from(users).where(eq(users.email, email))
+
+    // user doesnt exist
+    if (!user) {
+      return res
+        .status(401)
+        .json({ message: `user with ${email} doesnt exist!` })
+    }
+
+    // user exists -> compare password
+    const isPasswordValid = await comparePassword(password, user.password)
+
+    // wrong password
+    if (!isPasswordValid) {
+      return res
+        .status(401)
+        .json({ message: 'Wrong password, please try again!' })
+    }
+
+    // user not verified
+    if (!user.isVerified) {
+      return res
+        .status(401)
+        .json({ message: 'Please verify your email first!' })
+    }
+
+    const token = generateToken({ userId: user.id }, 'login')
+
+    // send login alert email
+    await enqueueLoginEmail({ email, token })
+
+    res.status(200).json({
+      message:
+        'Login successful! Save the token securely. You can access the token from your email too!',
+      token,
+      user: {
+        name: user.firstName,
+        email: user.email,
+      },
+    })
+  } catch (error) {
+    console.error('Login error:', error)
     res.status(500).json({ message: 'Internal server error' })
   }
 }

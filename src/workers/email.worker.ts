@@ -19,6 +19,19 @@ const emailWorker = new Worker(
       return { status: 'success' }
     }
 
+    if (job.name === 'send-login-email') {
+      const html = `
+        <p>Hi ${job.data.email},</p>
+        <p>Your login was successful. Use the token below to access your account:</p>
+        <p><strong>${job.data.token}</strong></p>
+        <p>If you did not request this, please secure your account immediately.</p>
+      `
+
+      await sendMail({ to: job.data.email, subject: 'Login Successful!', html })
+
+      return { status: 'success' }
+    }
+
     // unknown job
     throw new Error(`Unknown job name: ${job.name}`)
   },

@@ -17,3 +17,10 @@ export async function enqueueVerificationEmail(payload: {
 }) {
   await emailQueue.add('send-verification-email', payload, DEFAULT_JOB_OPTIONS)
 }
+
+export async function enqueueLoginEmail(payload: {
+  email: string
+  token: string
+}) {
+  await emailQueue.add('send-login-email', payload, DEFAULT_JOB_OPTIONS)
+}

@@ -5,7 +5,7 @@ import {
   registerUser,
   resetPassword,
   verifyEmail,
-} from './auth.controller'
+} from './auth.controllers'
 
 const authRouter = Router()
 

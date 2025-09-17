@@ -51,6 +51,6 @@ export async function authMiddleware(
     next()
   } catch (error) {
     console.error('Token verification error:', error)
-    return res.status(401).json({ message: 'Invalid token' })
+    res.status(500).json({ message: 'Invalid token' })
   }
 }

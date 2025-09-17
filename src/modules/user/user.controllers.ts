@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { db } from '../../config/db'
-import { users } from '../../db/schema'
+import { products, users } from '../../db/schema'
 
 // admin only
 export async function getAllUsers(req: Request, res: Response) {
@@ -22,6 +22,23 @@ export async function getAllUsers(req: Request, res: Response) {
       success: true,
       userCount: allUsers.length,
       data: allUsers,
+    })
+  } catch (error) {
+    console.error('Error getting users:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching users',
+    })
+  }
+}
+
+export async function getAllProducts(req: Request, res: Response) {
+  try {
+    const allProducts = await db.select().from(products)
+    res.status(200).json({
+      success: true,
+      productCount: allProducts.length,
+      allProducts,
     })
   } catch (error) {
     console.error('Error getting users:', error)

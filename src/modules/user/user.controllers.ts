@@ -1,9 +1,9 @@
-import { Response } from 'express'
-import { AuthRequest } from '../../middlewares/auth.middleware'
+import { Request, Response } from 'express'
 import { db } from '../../config/db'
 import { users } from '../../db/schema'
 
-export async function getAllUsers(req: AuthRequest, res: Response) {
+// admin only
+export async function getAllUsers(req: Request, res: Response) {
   try {
     // fetch users, exclude password
     const allUsers = await db

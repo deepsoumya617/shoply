@@ -5,6 +5,6 @@ import { adminOrSellerMiddleware } from '../../middlewares/adminOrSeller.middlew
 const productRouter = Router()
 
 // product routes
-productRouter.post('/create-product', adminOrSellerMiddleware, createProduct)
+productRouter.post('/', adminOrSellerMiddleware, createProduct)
 
 export default productRouter

@@ -6,7 +6,7 @@
   "scripts": {
     "dev:api": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
-    "start:api": "node dist/index.js",
+    "start:api": "node dist/src/index.js",
     "push": "drizzle-kit push",
     "studio": "drizzle-kit studio",
     "dev:worker": "ts-node-dev --respawn --transpile-only src/workers/email.worker.ts",

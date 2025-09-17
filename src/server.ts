@@ -15,6 +15,8 @@ async function startServer() {
   await redis.ping() // check redis connection
   await connectDB() // connect db
 
+  // await seedCategories() // seed category data
+
   app.listen(env.PORT, () => {
     console.log(`Server is running on port http://localhost:${env.PORT}`)
   })

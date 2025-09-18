@@ -1,5 +1,9 @@
 import { Request, Response } from 'express'
-import { createProductSchema, getProductByIdSchema } from './product.schema'
+import {
+  createProductSchema,
+  productIdSchema,
+  updateProductSchema,
+} from './product.schema'
 import { db } from '../../config/db'
 import { products } from '../../db/schema'
 import { eq } from 'drizzle-orm'
@@ -62,7 +66,7 @@ export async function getAllProducts(req: Request, res: Response) {
 }
 
 export async function getProductById(req: Request, res: Response) {
-  const result = getProductByIdSchema.safeParse(req.params)
+  const result = productIdSchema.safeParse(req.params)
 
   // validate input data
   if (!result.success) {
@@ -91,6 +95,52 @@ export async function getProductById(req: Request, res: Response) {
     })
   } catch (error) {
     console.error('Error getting users:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching users',
+    })
+  }
+}
+
+export async function updateProductById(req: Request, res: Response) {
+  const idResult = productIdSchema.safeParse(req.params)
+  const bodyResult = updateProductSchema.safeParse(req.body)
+
+  // validate id and body
+  if (!idResult.success) {
+    console.error('Invalid ID: ', idResult.error)
+    return res.status(403).json({
+      status: 'failed',
+      message: 'Invalid product id. Please check and try again.',
+    })
+  }
+
+  if (!bodyResult.success) {
+    console.error('Input validation failed: ', bodyResult.error)
+    return res.status(400).json({
+      status: 'failed',
+      message: 'Invalid input data. Please check and try again.',
+    })
+  }
+
+  const { id } = idResult.data
+
+  try {
+    const [updatedProduct] = await db
+      .update(products)
+      .set(bodyResult.data)
+      .where(eq(products.id, id))
+      .returning()
+
+    if (!updatedProduct) {
+      return res.status(400).json({ message: 'Product does not exist' })
+    }
+
+    res.status(200).json({
+      success: true,
+      updatedProduct,
+    })
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Internal server error while fetching users',

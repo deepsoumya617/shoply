@@ -5,7 +5,7 @@ import {
   updateProductSchema,
 } from './product.schema'
 import { db } from '../../config/db'
-import { products } from '../../db/schema'
+import { categories, products } from '../../db/schema'
 import { eq } from 'drizzle-orm'
 
 export async function createProduct(req: Request, res: Response) {
@@ -57,7 +57,7 @@ export async function getAllProducts(req: Request, res: Response) {
       allProducts,
     })
   } catch (error) {
-    console.error('Error getting users:', error)
+    console.error('Error getting products:', error)
     res.status(500).json({
       success: false,
       message: 'Internal server error while fetching users',
@@ -94,7 +94,7 @@ export async function getProductById(req: Request, res: Response) {
       product,
     })
   } catch (error) {
-    console.error('Error getting users:', error)
+    console.error(`Error getting product with id ${id} :`, error)
     res.status(500).json({
       success: false,
       message: 'Internal server error while fetching users',
@@ -141,6 +141,74 @@ export async function updateProductById(req: Request, res: Response) {
       updatedProduct,
     })
   } catch (error) {
+    console.error('Error updating product: ', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching users',
+    })
+  }
+}
+
+export async function deleteProductById(req: Request, res: Response) {
+  const result = productIdSchema.safeParse(req.params)
+
+  // validate input data
+  if (!result.success) {
+    console.error('Input validation failed: ', result.error)
+    return res.status(403).json({
+      status: 'failed',
+      message: 'Invalid input data. Please check and try again.',
+    })
+  }
+
+  const { id } = result.data
+
+  try {
+    await db.delete(products).where(eq(products.id, id))
+
+    res.status(200).json({ message: 'Product deleted successfully!' })
+  } catch (error) {
+    console.error('Error deleting product: ', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching users',
+    })
+  }
+}
+
+export async function getProductByCategories(req: Request, res: Response) {
+  const result = productIdSchema.safeParse(req.params)
+
+  // validate input data
+  if (!result.success) {
+    console.error('Input validation failed: ', result.error)
+    return res.status(403).json({
+      status: 'failed',
+      message: 'Invalid input data. Please check and try again.',
+    })
+  }
+
+  const { id } = result.data
+
+  try {
+    const productsByCategories = await db
+      .select()
+      .from(products)
+      .where(eq(products.categoryId, id))
+
+    if (!productsByCategories) {
+      return res.status(400).json({
+        success: false,
+        message: `Products with category id ${id} does not exit`,
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      productsByCategories,
+    })
+  } catch (error) {
+    console.error('Error getting product by categories: ', error)
     res.status(500).json({
       success: false,
       message: 'Internal server error while fetching users',

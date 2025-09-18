@@ -1,12 +1,15 @@
 import { Router } from 'express'
 import {
   createProduct,
+  deleteProductById,
   getAllProducts,
+  getProductByCategories,
   getProductById,
   updateProductById,
 } from './product.controllers'
-import { adminOrSellerMiddleware } from '../../middlewares/adminOrSeller.middleware'
+import { sellerMiddleware } from '../../middlewares/seller.middleware'
 import { authMiddleware } from '../../middlewares/auth.middleware'
+import { adminOrSellerMiddleware } from '../../middlewares/adminOrSeller.middleware'
 
 const productRouter = Router()
 
@@ -15,14 +18,15 @@ const productRouter = Router()
 // public route - no auth needed
 productRouter.get('/', getAllProducts)
 productRouter.get('/:id', getProductById)
+productRouter.get('/category/:id', getProductByCategories)
 
 // protected routes
-productRouter.post('/', authMiddleware, adminOrSellerMiddleware, createProduct)
-productRouter.put(
+productRouter.post('/', authMiddleware, sellerMiddleware, createProduct)
+productRouter.put('/:id', authMiddleware, sellerMiddleware, updateProductById)
+productRouter.delete(
   '/:id',
   authMiddleware,
   adminOrSellerMiddleware,
-  updateProductById
+  deleteProductById
 )
-
 export default productRouter

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+// base schemas
 const nameSchema = z
   .string()
   .min(5, 'Name is required')
@@ -24,4 +25,9 @@ export const createProductSchema = z.object({
   stockQuantity: stockSchema,
   sellerId: uuidSchema,
   categoryId: uuidSchema,
+})
+
+// composite schemas
+export const getProductByIdSchema = z.object({
+  id: uuidSchema,
 })

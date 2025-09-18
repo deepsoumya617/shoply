@@ -1,13 +1,21 @@
 import { Router } from 'express'
-import { createProduct } from './product.controllers'
+import {
+  createProduct,
+  getAllProducts,
+  getProductById,
+} from './product.controllers'
 import { adminOrSellerMiddleware } from '../../middlewares/adminOrSeller.middleware'
 import { authMiddleware } from '../../middlewares/auth.middleware'
-import { getAllProducts } from '../user/user.controllers'
 
 const productRouter = Router()
 
 // product routes
-productRouter.post('/', authMiddleware, adminOrSellerMiddleware, createProduct)
+
+// public route - no auth needed
 productRouter.get('/', getAllProducts)
+productRouter.get('/:id', getProductById)
+
+// protected routes
+productRouter.post('/', authMiddleware, adminOrSellerMiddleware, createProduct)
 
 export default productRouter

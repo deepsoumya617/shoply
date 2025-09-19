@@ -1,12 +1,13 @@
 import { Request, Response } from 'express'
 import {
   createProductSchema,
+  getProductsSchema,
   productIdSchema,
   updateProductSchema,
 } from './product.schema'
 import { db } from '../../config/db'
-import { categories, products } from '../../db/schema'
-import { eq } from 'drizzle-orm'
+import { products } from '../../db/schema'
+import { eq, count, desc } from 'drizzle-orm'
 
 export async function createProduct(req: Request, res: Response) {
   const result = createProductSchema.safeParse(req.body)
@@ -49,12 +50,51 @@ export async function createProduct(req: Request, res: Response) {
 }
 
 export async function getAllProducts(req: Request, res: Response) {
+  const result = getProductsSchema.safeParse(req.query)
+
+  // validate input data
+  if (!result.success) {
+    console.error('Input validation failed: ', result.error)
+    return res.status(400).json({
+      status: 'failed',
+      message: 'Invalid input data. Please check and try again.',
+    })
+  }
+
+  const { page, limit } = result.data
+  const offset = (page - 1) * limit
+
   try {
-    const allProducts = await db.select().from(products)
+    // get total no of products
+    const result = await db.select({ count: count() }).from(products)
+    const rowCount = result[0].count
+
+    // get total pages
+    const totalPages = rowCount > 0 ? Math.ceil(rowCount / limit) : 1
+
+    // handle edge case
+    if (page > totalPages) {
+      return res.json({
+        message: `page no should be less than or equal to ${totalPages}`,
+      })
+    }
+
+    const allProducts = await db
+      .select()
+      .from(products)
+      .orderBy(desc(products.createdAt))
+      .limit(limit)
+      .offset(offset)
+
     res.status(200).json({
       success: true,
-      productCount: allProducts.length,
-      allProducts,
+      data: allProducts,
+      meta: {
+        totalProducts: rowCount,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrevious: page > 1,
+      },
     })
   } catch (error) {
     console.error('Error getting products:', error)

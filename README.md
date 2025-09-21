@@ -43,7 +43,7 @@ A scalable RESTful eCommerce 🛒 backend API built with `Node.js`, `Express`, a
   - User `registration` and `verification`, `login` and `reset-password`   
   - token based authentication with `JWT` for session management
   - Role-based access control (`customer`, `admin`, `seller`)  
-  - routes ~ `/register`, `/verify-email`, `login`, `forgot-password`, `reset-password`
+  - routes ~ `/register`, `/verify-email`, `/login`, `/forgot-password`, `/reset-password`
 
 ---
 

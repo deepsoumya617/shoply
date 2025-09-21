@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { adminMiddleware } from '../../middlewares/admin.middleware'
-import { getAllUsers } from './user.controllers'
+import { getAllUsers, getMyProfile } from './user.controllers'
 import { authMiddleware } from '../../middlewares/auth.middleware'
 
 const userRouter = Router()
@@ -8,7 +8,8 @@ const userRouter = Router()
 // middleware
 userRouter.use(authMiddleware)
 
-// routes - user only
+// routes - for all users
+userRouter.get('/profile/me', authMiddleware, getMyProfile)
 
 // routes - admin only
 userRouter.get('/', adminMiddleware, getAllUsers)

@@ -3,6 +3,8 @@ import { db } from '../../config/db'
 import { users } from '../../db/schema'
 import { AuthRequest } from '../../middlewares/auth.middleware'
 import { eq } from 'drizzle-orm'
+import { updateProfileSchema } from './user.schema'
+import { hashPassword } from '../../utils/bcrypt'
 
 // admin only
 export async function getAllUsers(req: Request, res: Response) {
@@ -58,6 +60,46 @@ export async function getMyProfile(req: AuthRequest, res: Response) {
     res.status(500).json({
       success: false,
       message: 'Internal server error',
+    })
+  }
+}
+
+export async function updateProfile(req: AuthRequest, res: Response) {
+  const result = updateProfileSchema.safeParse(req.body)
+
+  // validate input data
+  if (!result.success) {
+    console.error('Input validation failed: ', result.error)
+    return res.status(403).json({
+      status: 'failed',
+      message: 'Invalid input data. Please check and try again.',
+    })
+  }
+
+  // remove undefined fields
+  let cleanedData = Object.fromEntries(
+    Object.entries(result.data).filter(([_, v]) => v !== undefined)
+  )
+
+  if (cleanedData.password) {
+    const hashedPassword = await hashPassword(cleanedData.password)
+    cleanedData = { ...cleanedData, password: hashedPassword }
+  }
+
+  try {
+    const [user] = await db
+      .update(users)
+      .set(cleanedData)
+      .where(eq(users.id, req.user!.userId))
+      .returning()
+
+    res
+      .status(201)
+      .json({ success: true, message: 'Profile updated successfully', user })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching users',
     })
   }
 }

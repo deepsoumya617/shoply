@@ -2,13 +2,37 @@ import { Request, Response } from 'express'
 import { db } from '../../config/db'
 import { users } from '../../db/schema'
 import { AuthRequest } from '../../middlewares/auth.middleware'
-import { eq } from 'drizzle-orm'
-import { updateProfileSchema } from './user.schema'
+import { eq, count } from 'drizzle-orm'
+import { getUsersSchema, updateProfileSchema } from './user.schema'
 import { hashPassword } from '../../utils/bcrypt'
 
 // admin only
 export async function getAllUsers(req: Request, res: Response) {
+  const result = getUsersSchema.safeParse(req.query)
+
+  // validate input data
+  if (!result.success) {
+    console.error('Input validation failed: ', result.error)
+    return res.status(400).json({
+      status: 'failed',
+      message: 'Invalid input data. Please check and try again.',
+    })
+  }
+
+  const { limit, page } = result.data
+  const offset = (page - 1) * limit
+
   try {
+    const [result] = await db.select({ count: count() }).from(users)
+
+    const totalPages = result.count > 0 ? Math.ceil(result.count / limit) : 1
+
+    if (page > totalPages) {
+      return res.json({
+        message: `page no should be less than or equal to ${totalPages}`,
+      })
+    }
+
     // fetch users, exclude password
     const allUsers = await db
       .select({
@@ -21,11 +45,20 @@ export async function getAllUsers(req: Request, res: Response) {
         sellerReqPending: users.sellerRequestPending,
       })
       .from(users)
+      .limit(limit)
+      .offset(offset)
 
     res.status(200).json({
       success: true,
-      userCount: allUsers.length,
       data: allUsers,
+      meta: {
+        meta: {
+          totalUsers: result.count,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrevious: page > 1,
+        },
+      },
     })
   } catch (error) {
     console.error('Error getting users:', error)

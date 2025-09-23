@@ -9,10 +9,10 @@ A scalable RESTful eCommerce 🛒 backend API built with `Node.js`, `Express`, a
 ## 🚀 Progress so far
 
 ### ⌛ Completed
-- **Authentication** (`signup`, `login`, `verify-email`, `reset password`) 🔐   
+- **Authentication** (`signup`, `login`, `verify-email`, `reset password`, `logout` and `refresh`) 🔐   
 - **Middlewares** - `adminMiddleware`, `sellerMiddleware`, `adminOrSellerMiddleware`
 - Product **CRUD**
-- **Pagination** for fetching all products, to handle server load and keep it responsive.
+- **Pagination** for fetching all products and users(admin route), to handle server load and keep it responsive.
 - **Dockerization** 🚢 
 - **Background Jobs** for sending emails.
 
@@ -43,7 +43,7 @@ A scalable RESTful eCommerce 🛒 backend API built with `Node.js`, `Express`, a
   - User `registration` and `verification`, `login` and `reset-password`   
   - token(`access token` and `refresh token`) based authentication with `JWT` for session management
   - Role-based access control (`customer`, `admin`, `seller`)  
-  - routes ~ `/register`, `/verify-email`, `/login`, `/forgot-password`, `/reset-password`
+  - routes ~ `/auth/register`, `/auth/verify-email`, `/auth/login`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/logout`, `/auth/refresh`.
 
 ---
 

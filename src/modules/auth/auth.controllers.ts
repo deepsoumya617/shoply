@@ -7,14 +7,16 @@ import {
 } from './auth.schema'
 import { db } from '../../config/db'
 import { and, eq } from 'drizzle-orm'
-import { users } from '../../db/schema'
-import { comparePassword, hashPassword } from '../../utils/bcrypt'
+import { refreshTokens, users } from '../../db/schema'
+import { compareHash, hashString } from '../../utils/bcrypt'
 import { generateToken, verifyToken } from '../../utils/jwt'
+import crypto from 'node:crypto'
 import {
   enqueueForgotPasswordEmail,
   enqueueLoginEmail,
   enqueueVerificationEmail,
 } from '../../jobs/email.queue'
+import { UAParser } from 'ua-parser-js'
 
 // register user
 export async function registerUser(req: Request, res: Response) {
@@ -43,10 +45,10 @@ export async function registerUser(req: Request, res: Response) {
 
     // create user
     // hash password
-    const hashedPassword = await hashPassword(password)
+    const hashedPassword = await hashString(password)
 
     // generate token
-    const verificationToken = generateToken({ email }, 'register')
+    const verificationToken = generateToken({ email })
 
     const [newUser] = await db
       .insert(users)
@@ -141,7 +143,7 @@ export async function loginUser(req: Request, res: Response) {
     }
 
     // user exists -> compare password
-    const isPasswordValid = await comparePassword(password, user.password)
+    const isPasswordValid = await compareHash(password, user.password)
 
     // wrong password
     if (!isPasswordValid) {
@@ -157,15 +159,39 @@ export async function loginUser(req: Request, res: Response) {
         .json({ message: 'Please verify your email first!' })
     }
 
-    const token = generateToken({ userId: user.id }, 'login')
+    const accessToken = generateToken({ userId: user.id })
+    const refreshToken = crypto.randomBytes(64).toString('hex') // random string
+    const hashedRefreshToken = await hashString(refreshToken)
+    const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+
+    // set refreshToken in cookie
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      sameSite: true,
+      secure: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    })
+
+    // save hashedRefreshToken in db for later comparison
+    await db.insert(refreshTokens).values({
+      userId: user.id,
+      tokenHash: hashedRefreshToken,
+      expiresAt: refreshTokenExpiry,
+    })
 
     // send login alert email
-    await enqueueLoginEmail({ email, token })
+    const ip = req.ip || 'Unknown IP'
+    const userAgent = req.headers['user-agent']
+    const parser = new UAParser(userAgent)
+    const deviceInfo = `${parser.getBrowser().name} on ${parser.getOS().name}`
+
+    await enqueueLoginEmail({ email, ip, deviceInfo })
 
     res.status(200).json({
       message:
         'Login successful! Save the token securely. You can access the token from your email too!',
-      token,
+      accessToken,
       user: {
         name: user.firstName,
         email: user.email,
@@ -209,7 +235,7 @@ export async function forgotPassword(req: Request, res: Response) {
     }
 
     // generate token to reset password
-    const token = generateToken({ userId: user.id }, 'reset-password')
+    const token = generateToken({ userId: user.id })
 
     // send mail through workers
     await enqueueForgotPasswordEmail({ email, token })
@@ -264,7 +290,7 @@ export async function resetPassword(req: Request, res: Response) {
     }
 
     // update password
-    const hashedPassword = await hashPassword(password)
+    const hashedPassword = await hashString(password)
 
     await db
       .update(users)

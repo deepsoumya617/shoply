@@ -22,9 +22,13 @@ const emailWorker = new Worker(
     if (job.name === 'send-login-email') {
       const html = `
         <p>Hi ${job.data.email},</p>
-        <p>Your login was successful. Use the token below to access your account:</p>
-        <p><strong>${job.data.token}</strong></p>
-        <p>If you did not request this, please secure your account immediately.</p>
+        <p>A new login to your account was just detected:</p>
+        <ul>
+          <li><strong>Device:</strong> ${job.data.deviceInfo}</li>
+          <li><strong>IP:</strong> ${job.data.ip}</li>
+          <li><strong>Time:</strong> ${new Date().toUTCString()}</li>
+        </ul>
+        <p>If this wasn’t you, please <a href="http://localhost:8080/api/auth/reset-password">reset your password</a> immediately.</p>
       `
 
       await sendMail({ to: job.data.email, subject: 'Login Successful!', html })

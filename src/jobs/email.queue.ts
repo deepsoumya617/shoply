@@ -20,7 +20,8 @@ export async function enqueueVerificationEmail(payload: {
 
 export async function enqueueLoginEmail(payload: {
   email: string
-  token: string
+  ip: string
+  deviceInfo: string
 }) {
   await emailQueue.add('send-login-email', payload, DEFAULT_JOB_OPTIONS)
 }

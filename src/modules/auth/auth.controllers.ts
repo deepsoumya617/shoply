@@ -8,7 +8,7 @@ import {
 import { db } from '../../config/db'
 import { and, eq } from 'drizzle-orm'
 import { refreshTokens, users } from '../../db/schema'
-import { compareHash, hashString } from '../../utils/bcrypt'
+import { comparePassword, hashPassword, hashToken } from '../../utils/hash'
 import { generateToken, verifyToken } from '../../utils/jwt'
 import crypto from 'node:crypto'
 import {
@@ -45,7 +45,7 @@ export async function registerUser(req: Request, res: Response) {
 
     // create user
     // hash password
-    const hashedPassword = await hashString(password)
+    const hashedPassword = await hashPassword(password)
 
     // generate token
     const verificationToken = generateToken({ email })
@@ -143,7 +143,7 @@ export async function loginUser(req: Request, res: Response) {
     }
 
     // user exists -> compare password
-    const isPasswordValid = await compareHash(password, user.password)
+    const isPasswordValid = await comparePassword(password, user.password)
 
     // wrong password
     if (!isPasswordValid) {
@@ -161,9 +161,8 @@ export async function loginUser(req: Request, res: Response) {
 
     const accessToken = generateToken({ userId: user.id })
     const refreshToken = crypto.randomBytes(64).toString('hex') // random string
-    const hashedRefreshToken = await hashString(refreshToken)
+    const hashedRefreshToken = hashToken(refreshToken)
     const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-
 
     // set refreshToken in cookie
     res.cookie('refreshToken', refreshToken, {
@@ -290,7 +289,7 @@ export async function resetPassword(req: Request, res: Response) {
     }
 
     // update password
-    const hashedPassword = await hashString(password)
+    const hashedPassword = await hashPassword(password)
 
     await db
       .update(users)
@@ -302,6 +301,77 @@ export async function resetPassword(req: Request, res: Response) {
     res.status(201).json({ message: 'password updated succesfully!' })
   } catch (error) {
     console.log('Reset password error:', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+// refresh tokens
+export async function refreshAccessToken(req: Request, res: Response) {
+  // console.log(req.cookies)
+  // get the refresh token from req.cookies
+  const refreshToken = req.cookies.refreshToken
+
+  if (!refreshToken) {
+    return res.status(401).json({ message: 'Refresh Token not provided' })
+  }
+
+  // hash the token
+  const hashedToken = hashToken(refreshToken)
+  console.log(hashedToken)
+
+  try {
+    // find in db
+    const [token] = await db
+      .select()
+      .from(refreshTokens)
+      .where(eq(refreshTokens.tokenHash, hashedToken))
+
+    // check if token exists
+    if (!token) {
+      return res.status(403).json({ message: 'Refresh Token does not exist' })
+    }
+
+    // check expiry
+    if (token.expiresAt < new Date()) {
+      return res.status(403).json({ message: 'Refresh Token expired' })
+    }
+
+    const accessToken = generateToken({ userId: token.userId })
+
+    res.status(200).json({
+      success: true,
+      accessToken,
+    })
+  } catch (error) {
+    console.error('Refresh token error: ', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+// logout user
+export async function logOutUser(req: Request, res: Response) {
+  const refreshToken = req.cookies.refreshToken
+
+  try {
+    if (refreshToken) {
+      const hashedRefreshToken = hashToken(refreshToken)
+
+      // delete from db
+      await db
+        .delete(refreshTokens)
+        .where(eq(refreshTokens.tokenHash, hashedRefreshToken))
+    }
+
+    // clear from the browser
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+    })
+
+    res.status(200).json({ success: true, message: 'Logged out successfully!' })
+  } catch (error) {
+    console.error('Log out error: ', error)
     res.status(500).json({ message: 'Internal server error' })
   }
 }

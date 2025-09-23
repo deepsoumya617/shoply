@@ -18,7 +18,6 @@ export const refreshTokens = pgTable(
     tokenHash: text('token_hash').notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     expiresAt: timestamp('expires_at').notNull(),
-    isRevoked: boolean('is_revoked').default(false),
   },
   table => [
     index('idx_refresh_tokens_user_id').on(table.userId),

@@ -1,12 +1,17 @@
 import bcrypt from 'bcrypt'
+import crypto from 'node:crypto'
 
-export async function hashString(password: string): Promise<string> {
+export function hashToken(token: string) {
+  return crypto.createHash('sha256').update(token).digest('hex')
+}
+
+export async function hashPassword(password: string): Promise<string> {
   const saltRounds = 10
   const hashedPassword = await bcrypt.hash(password, saltRounds)
   return hashedPassword
 }
 
-export async function compareHash(
+export async function comparePassword(
   plainPassword: string,
   hashedPassword: string
 ): Promise<boolean> {

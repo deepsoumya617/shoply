@@ -51,6 +51,20 @@ const emailWorker = new Worker(
       return { status: 'success' }
     }
 
+    if (job.name === 'send-updateUserRole-email') {
+      const updateRoleURL = `${env.APP_URL}/api/users/admin/update-user-role?userId=${job.data.userId}`
+
+      const html = `
+        <p>Hi,</p>
+        <p>Click here to change ROLE of the user with id "${job.data.userId}":</p>
+        <p><a href="${updateRoleURL}">Update user role</a></p>
+      `
+
+      await sendMail({ to: env.ADMIN_EMAIL, subject: 'Update user role', html })
+
+      return { status: 'success' }
+    }
+
     // unknown job
     throw new Error(`Unknown job name: ${job.name}`)
   },

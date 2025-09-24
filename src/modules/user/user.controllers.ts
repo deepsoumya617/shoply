@@ -5,6 +5,7 @@ import { AuthRequest } from '../../middlewares/auth.middleware'
 import { eq, count } from 'drizzle-orm'
 import { getUsersSchema, updateProfileSchema } from './user.schema'
 import { hashPassword } from '../../utils/hash'
+import { enqueueUpdateUserRoleEmail } from '../../jobs/email.queue'
 
 // admin only
 export async function getAllUsers(req: Request, res: Response) {
@@ -133,6 +134,66 @@ export async function updateProfile(req: AuthRequest, res: Response) {
     res.status(500).json({
       success: false,
       message: 'Internal server error while fetching users',
+    })
+  }
+}
+
+export async function requestUpdateRole(req: AuthRequest, res: Response) {
+  const userId = req.user!.userId
+
+  try {
+    // send email to admin
+    await enqueueUpdateUserRoleEmail({ userId })
+
+    res.status(200).json({
+      message:
+        'Role update request sent succesfully to ADMIN. Please wait until ADMIN approves.',
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching users',
+    })
+  }
+}
+
+export async function updateUserRole(req: AuthRequest, res: Response) {
+  const userId = req.query.userId as string
+
+  if (!userId) {
+    return res.status(401).json({ message: 'User ID not provided' })
+  }
+
+  try {
+    // find user in db
+    const [user] = await db.select().from(users).where(eq(users.id, userId))
+
+    if (!user) {
+      return res.status(401).json({ message: 'user does not exist' })
+    }
+
+    // update user
+    const [updatedUser] = await db
+      .update(users)
+      .set({ role: 'SELLER' })
+      .where(eq(users.id, userId))
+      .returning()
+
+    res.status(200).json({
+      success: true,
+      message: 'user role updated successfully',
+      user: {
+        id: updatedUser.id,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        email: updatedUser.email,
+        role: updatedUser.role,
+      },
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while updating user role',
     })
   }
 }

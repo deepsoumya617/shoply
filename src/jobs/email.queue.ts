@@ -36,3 +36,11 @@ export async function enqueueForgotPasswordEmail(payload: {
     DEFAULT_JOB_OPTIONS
   )
 }
+
+export async function enqueueUpdateUserRoleEmail(payload: { userId: string }) {
+  await emailQueue.add(
+    'send-updateUserRole-email',
+    payload,
+    DEFAULT_JOB_OPTIONS
+  )
+}

@@ -291,12 +291,16 @@ export async function resetPassword(req: Request, res: Response) {
     // update password
     const hashedPassword = await hashPassword(password)
 
+    // update user with new password
     await db
       .update(users)
       .set({
         password: hashedPassword,
       })
       .where(eq(users.id, userId))
+
+    // delete token
+    await db.delete(refreshTokens).where(eq(refreshTokens.userId, user.id))
 
     res.status(201).json({ message: 'password updated succesfully!' })
   } catch (error) {

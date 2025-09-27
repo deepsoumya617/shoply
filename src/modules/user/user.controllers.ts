@@ -5,7 +5,7 @@ import { AuthRequest } from '../../middlewares/auth.middleware'
 import { eq, count } from 'drizzle-orm'
 import { getUsersSchema, updateProfileSchema } from './user.schema'
 import { hashPassword } from '../../utils/hash'
-import { enqueueUpdateUserRoleEmail } from '../../jobs/email.queue'
+import { enqueueUpdateUserRoleEmail } from '../../jobs/email.job'
 
 // admin only
 export async function getAllUsers(req: Request, res: Response) {

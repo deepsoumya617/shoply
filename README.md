@@ -10,15 +10,16 @@ A scalable RESTful eCommerce 🛒 backend API built with `Node.js`, `Express`, a
 
 ### ⌛ Completed
 - **Authentication** (`signup`, `login`, `verify-email`, `reset password`, `logout` and `refresh`) 🔐   
-- **Middlewares** - `adminMiddleware`, `sellerMiddleware`, `adminOrSellerMiddleware`
+- **Middlewares** - `authMiddleware`, `adminMiddleware`, `sellerMiddleware`, `adminOrSellerMiddleware`
 - Product **CRUD**
 - **Pagination** for fetching all products and users(admin route), to handle server load and keep it responsive.
 - **Dockerization** 🚢 
 - **Background Jobs** for sending emails.
+- **User** routes
 
 ### ⏳ Ongoing
-- **User** routes
-- **Proudct Image upload** in `AWS S3` using `workers`
+- **caching** frequently accessed(*products*, *category*) data with `redis`
+- **testing** `auth`, `product` and `user` routes using `vitest` and `supertest`
 
 ## 🛠️ Tech Stack
 
@@ -43,7 +44,7 @@ A scalable RESTful eCommerce 🛒 backend API built with `Node.js`, `Express`, a
   - User `registration` and `verification`, `login` and `reset-password`   
   - token(`access token` and `refresh token`) based authentication with `JWT` for session management
   - Role-based access control (`customer`, `admin`, `seller`)  
-  - routes ~ `/auth/register`, `/auth/verify-email`, `/auth/login`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/logout`, `/auth/refresh`.
+  - *routes* ~ `/auth/register`, `/auth/verify-email`, `/auth/login`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/logout`, `/auth/refresh`.
 
 ---
 

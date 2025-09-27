@@ -6,8 +6,9 @@ import {
   updateProductSchema,
 } from './product.schema'
 import { db } from '../../config/db'
-import { products } from '../../db/schema'
+import { categories, products } from '../../db/schema'
 import { eq, count, desc } from 'drizzle-orm'
+import redis from '../../config/redis'
 
 export async function createProduct(req: Request, res: Response) {
   const result = createProductSchema.safeParse(req.body)
@@ -126,7 +127,7 @@ export async function getProductById(req: Request, res: Response) {
       .where(eq(products.id, id))
 
     if (!product) {
-      return res.status(400).json({ message: 'Product does not exist' })
+      return res.status(404).json({ message: 'Product does not exist' })
     }
 
     res.status(200).json({
@@ -173,7 +174,7 @@ export async function updateProductById(req: Request, res: Response) {
       .returning()
 
     if (!updatedProduct) {
-      return res.status(400).json({ message: 'Product does not exist' })
+      return res.status(404).json({ message: 'Product does not exist' })
     }
 
     res.status(200).json({
@@ -237,7 +238,7 @@ export async function getProductByCategories(req: Request, res: Response) {
       .where(eq(products.categoryId, id))
 
     if (!productsByCategories) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
         message: `Products with category id ${id} does not exit`,
       })
@@ -252,6 +253,48 @@ export async function getProductByCategories(req: Request, res: Response) {
     res.status(500).json({
       success: false,
       message: 'Internal server error while fetching users',
+    })
+  }
+}
+
+export async function getAllCategories(req: Request, res: Response) {
+  const cacheKey = 'categories:all' // set the key first
+
+  try {
+    // check in cache first with the key
+    const cachedData = await redis.get(cacheKey)
+
+    if (cachedData) {
+      console.log('Cache hit for categories')
+      return res.status(200).json({
+        success: true,
+        data: JSON.parse(cachedData),
+      })
+    }
+
+    // its not in the cache, so i have to fetch it first from db
+    console.log('Cache miss for categories. Fetching from db.')
+    const allCategories = await db.select().from(categories)
+
+    if (!allCategories || allCategories.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No categories found',
+      })
+    }
+
+    // and then put it in cache
+    await redis.set(cacheKey, JSON.stringify(allCategories), 'EX', 1800)
+
+    res.status(200).json({
+      success: true,
+      allCategories,
+    })
+  } catch (error) {
+    console.error('Error getting categories: ', error)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching categories',
     })
   }
 }

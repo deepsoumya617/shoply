@@ -2,6 +2,7 @@ import { Router } from 'express'
 import {
   createProduct,
   deleteProductById,
+  getAllCategories,
   getAllProducts,
   getProductByCategories,
   getProductById,
@@ -17,6 +18,7 @@ const productRouter = Router()
 
 // public route - no auth needed
 productRouter.get('/', getAllProducts)
+productRouter.get('/categories', getAllCategories)
 productRouter.get('/:id', getProductById)
 productRouter.get('/category/:id', getProductByCategories)
 
@@ -29,4 +31,5 @@ productRouter.delete(
   adminOrSellerMiddleware,
   deleteProductById
 )
+
 export default productRouter

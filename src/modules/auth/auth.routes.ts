@@ -8,11 +8,12 @@ import {
   resetPassword,
   verifyEmail,
 } from './auth.controllers'
+import { registerLimiter } from '../../middlewares/authRateLimit.middleware'
 
 const authRouter = Router()
 
 // auth routes
-authRouter.post('/register', registerUser)
+authRouter.post('/register', registerLimiter, registerUser)
 authRouter.get('/verify-email', verifyEmail)
 authRouter.post('/login', loginUser)
 authRouter.post('/forgot-password', forgotPassword)

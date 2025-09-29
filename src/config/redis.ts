@@ -4,6 +4,10 @@ import { env } from './env'
 const redis = new Redis({
   host: env.REDIS_HOST,
   port: env.REDIS_PORT,
+  // for running tests locally
+  // host: 'localhost',
+  // port: 6379,
+  // db: 1,
   maxRetriesPerRequest: null,
 })
 

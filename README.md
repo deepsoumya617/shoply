@@ -19,6 +19,7 @@ A scalable RESTful eCommerce 🛒 backend API built with `Node.js`, `Express`, a
 - **caching** frequently accessed(*category*) data with `redis`
 
 ### ⏳ Ongoing
+- **cart** features
 - **testing** `auth`, `product` and `user` routes using `vitest` and `supertest`
 - **rate limiting** 
 

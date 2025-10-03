@@ -2,13 +2,14 @@ import express, { Express } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import cookieParser from 'cookie-parser'
-import { RedisStore } from 'connect-redis'
 import session from 'express-session'
+import redis from './config/redis'
+import { RedisStore } from 'connect-redis'
+import { env } from './config/env'
 import authRoutes from './modules/auth/auth.routes'
 import productRoutes from './modules/product/product.routes'
 import userRoutes from './modules/user/user.routes'
-import redis from './config/redis'
-import { env } from './config/env'
+import cartRoutes from './modules/cart/cart.routes'
 
 const app: Express = express()
 
@@ -42,5 +43,6 @@ app.use(cookieParser())
 app.use('/api/auth', authRoutes)
 app.use('/api/products', productRoutes)
 app.use('/api/users', userRoutes)
+app.use('/api/cart/items', cartRoutes)
 
 export default app

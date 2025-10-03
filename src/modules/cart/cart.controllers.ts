@@ -17,15 +17,7 @@ export async function addItems(req: AuthRequest, res: Response) {
       message: 'Invalid input data. Please check and try again.',
     })
   }
-
-  // restrict seller and admin from using cart
-  if (req.user!.role !== 'CUSTOMER') {
-    return res.status(403).json({
-      success: false,
-      message: 'only customers can use cart',
-    })
-  }
-
+  
   const { productId, quantity } = result.data
 
   try {
@@ -61,3 +53,5 @@ export async function addItems(req: AuthRequest, res: Response) {
     res.status(500).json({ message: 'Internal server error' })
   }
 }
+
+export async function getCartItems(req: AuthRequest, res: Response) {}

@@ -169,3 +169,47 @@ export async function updateQuantity(req: AuthRequest, res: Response) {
     res.status(500).json({ message: 'Invalid server error' })
   }
 }
+
+export async function deleteItemById(req: AuthRequest, res: Response) {
+  const result = cartItemsIdSchema.safeParse(req.params)
+
+  // validate input
+  if (!result.success) {
+    console.error('Input validation failed: ', result.error)
+    return res.status(403).json({
+      status: 'failed',
+      message: 'Invalid input data. Please check and try again.',
+    })
+  }
+
+  const { id } = result.data
+
+  try {
+    // fetch the user cart first
+    const [cart] = await db
+      .select()
+      .from(carts)
+      .where(eq(carts.userId, req.user!.userId))
+
+    // maybe cart is empty
+    if (!cart) {
+      return res.json({
+        success: true,
+        message: 'cart is empty',
+      })
+    }
+
+    // delete item
+    await db.delete(cartItems).where(eq(cartItems.productId, id))
+
+    res.status(200).json({
+      success: true,
+      message: 'Item deleted successfully from cart',
+    })
+  } catch (error) {
+    console.error('Failed deleting cart item: ', error)
+    res.status(500).json({
+      message: 'Invalid sever error',
+    })
+  }
+}

@@ -10,6 +10,7 @@ import { carts } from '../../db/schema/cart'
 import { eq, sql, and } from 'drizzle-orm'
 import { cartItems } from '../../db/schema/cartItems'
 import { products } from '../../db/schema'
+import { enqueueCartJobs } from '../../jobs/cart.job'
 
 export async function addItems(req: AuthRequest, res: Response) {
   const result = addItemToCartSchema.safeParse(req.body)
@@ -48,6 +49,15 @@ export async function addItems(req: AuthRequest, res: Response) {
         target: [cartItems.cartId, cartItems.productId],
         set: { quantity: sql`${cartItems.quantity} + EXCLUDED.quantity` }, // increase qunatity
       })
+
+    // update lastActivity
+    await db
+      .update(carts)
+      .set({ lastActivity: new Date() })
+      .where(eq(carts.id, cart.id))
+
+    // ping workers
+    await enqueueCartJobs(cart.id, req.user!.email)
 
     res.status(200).json({
       success: true,
@@ -99,6 +109,15 @@ export async function getCartItems(req: AuthRequest, res: Response) {
     }))
 
     const totalPrice = itemsWSubtotal.reduce((sum, i) => sum + i.subtotal, 0)
+
+    // update lastActivity
+    await db
+      .update(carts)
+      .set({ lastActivity: new Date() })
+      .where(eq(carts.id, cart.id))
+
+    // ping workers
+    await enqueueCartJobs(cart.id, req.user!.email)
 
     // send response
     res.status(200).json({
@@ -160,6 +179,14 @@ export async function updateQuantity(req: AuthRequest, res: Response) {
       .set({ quantity })
       .where(and(eq(cartItems.cartId, cart.id), eq(cartItems.productId, id)))
 
+    // update lastActivity
+    await db
+      .update(carts)
+      .set({ lastActivity: new Date() })
+      .where(eq(carts.id, cart.id))
+    // ping workers
+    await enqueueCartJobs(cart.id, req.user!.email)
+
     res.status(200).json({
       success: true,
       message: 'Product quantity updated successfully!',
@@ -201,6 +228,15 @@ export async function deleteItemById(req: AuthRequest, res: Response) {
 
     // delete item
     await db.delete(cartItems).where(eq(cartItems.productId, id))
+
+    // update lastActivity
+    await db
+      .update(carts)
+      .set({ lastActivity: new Date() })
+      .where(eq(carts.id, cart.id))
+
+    // ping workers
+    await enqueueCartJobs(cart.id, req.user!.email)
 
     res.status(200).json({
       success: true,

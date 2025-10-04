@@ -58,14 +58,38 @@ services:
     env_file:
       - .env
 
-  worker:
+  worker_email:
     build: .
-    container_name: shoply_worker
-    command: pnpm run dev:worker
+    container_name: shoply_worker_email
+    command: pnpm run dev:worker:email
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - JWT_SECRET_KE Y=${JWT_SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - APP_URL=${APP_URL}
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+    env_file:
+      - .env
+
+  worker_cart:
+    build: .
+    container_name: shoply_worker_cart
+    command: pnpm run dev:worker:cart
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - DATABASE_URL=${DATABASE_URL_DOCKER}
       - EMAIL_HOST=${EMAIL_HOST}
       - EMAIL_PORT=${EMAIL_PORT}
       - EMAIL_USER=${EMAIL_USER}

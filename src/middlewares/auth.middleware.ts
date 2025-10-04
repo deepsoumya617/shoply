@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm'
 
 // extend Request to bind userId
 export interface AuthRequest extends Request {
-  user?: { userId: string; role: string }
+  user?: { userId: string; role: string; email: string }
 }
 
 export async function authMiddleware(
@@ -46,8 +46,9 @@ export async function authMiddleware(
     req.user = {
       userId,
       role: user.role,
+      email: user.email,
     }
-    
+
     next()
   } catch (error) {
     console.error('Token verification error:', error)

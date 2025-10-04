@@ -1,9 +1,13 @@
 import { AuthRequest } from '../../middlewares/auth.middleware'
 import { Response } from 'express'
-import { addItemToCartSchema } from './cart.schema'
+import {
+  addItemToCartSchema,
+  cartItemsIdSchema,
+  cartItemsQuantitySchema,
+} from './cart.schema'
 import { db } from '../../config/db'
 import { carts } from '../../db/schema/cart'
-import { eq, sql } from 'drizzle-orm'
+import { eq, sql, and } from 'drizzle-orm'
 import { cartItems } from '../../db/schema/cartItems'
 import { products } from '../../db/schema'
 
@@ -108,5 +112,60 @@ export async function getCartItems(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error('Failed to fetch cart items: ', error)
     res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+export async function updateQuantity(req: AuthRequest, res: Response) {
+  const idResult = cartItemsIdSchema.safeParse(req.params)
+  const bodyResult = cartItemsQuantitySchema.safeParse(req.body)
+
+  // validate id and body
+  if (!idResult.success) {
+    console.error('Invalid ID: ', idResult.error)
+    return res.status(403).json({
+      status: 'failed',
+      message: 'Invalid product id. Please check and try again.',
+    })
+  }
+
+  if (!bodyResult.success) {
+    console.error('Input validation failed: ', bodyResult.error)
+    return res.status(400).json({
+      status: 'failed',
+      message: 'Invalid input data. Please check and try again.',
+    })
+  }
+
+  const { id } = idResult.data
+  const { quantity } = bodyResult.data
+
+  try {
+    // fetch the user cart first
+    const [cart] = await db
+      .select()
+      .from(carts)
+      .where(eq(carts.userId, req.user!.userId))
+
+    // maybe cart is empty
+    if (!cart) {
+      return res.json({
+        success: true,
+        message: 'cart is empty',
+      })
+    }
+
+    // update quantity
+    await db
+      .update(cartItems)
+      .set({ quantity })
+      .where(and(eq(cartItems.cartId, cart.id), eq(cartItems.productId, id)))
+
+    res.status(200).json({
+      success: true,
+      message: 'Product quantity updated successfully!',
+    })
+  } catch (error) {
+    console.error('Failed to update quantity: ', error)
+    res.status(500).json({ message: 'Invalid server error' })
   }
 }

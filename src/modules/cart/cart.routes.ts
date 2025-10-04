@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { addItems, getCartItems } from './cart.controllers'
+import { addItems, getCartItems, updateQuantity } from './cart.controllers'
 import { authMiddleware } from '../../middlewares/auth.middleware'
 import { customerMiddleware } from '../../middlewares/customer.middleware'
 
@@ -11,5 +11,6 @@ cartRouter.use(authMiddleware, customerMiddleware)
 // cart routes
 cartRouter.post('/add-to-cart', addItems)
 cartRouter.get('/', getCartItems)
+cartRouter.put('/:id', updateQuantity)
 
 export default cartRouter

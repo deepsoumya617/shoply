@@ -10,3 +10,13 @@ export const addItemToCartSchema = z.object({
   productId: productIdSchema,
   quantity: quantitySchema,
 })
+
+// id schema
+export const cartItemsIdSchema = z.object({
+  id: productIdSchema,
+})
+
+// quantity schema
+export const cartItemsQuantitySchema = z.object({
+  quantity: quantitySchema,
+})

@@ -10,6 +10,7 @@ import authRoutes from './modules/auth/auth.routes'
 import productRoutes from './modules/product/product.routes'
 import userRoutes from './modules/user/user.routes'
 import cartRoutes from './modules/cart/cart.routes'
+import orderRoutes from './modules/order/order.routes'
 
 const app: Express = express()
 
@@ -44,5 +45,6 @@ app.use('/api/auth', authRoutes)
 app.use('/api/products', productRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/cart/items', cartRoutes)
+app.use('/api/orders', orderRoutes)
 
 export default app

@@ -3,7 +3,7 @@ import { orders } from './order'
 import { products } from './product'
 
 export const orderItems = pgTable('order_items', {
-  id: uuid('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   orderId: uuid('order_id')
     .notNull()
     .references(() => orders.id),

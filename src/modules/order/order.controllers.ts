@@ -1,0 +1,149 @@
+import { Response } from 'express'
+import { AuthRequest } from '../../middlewares/auth.middleware'
+import { createOrderSchema } from './order.schema'
+import { db } from '../../config/db'
+import { cartItems, carts, orderItems, orders, products } from '../../db/schema'
+import { and, eq, gte, inArray, sql } from 'drizzle-orm'
+
+export async function createOrder(req: AuthRequest, res: Response) {
+  const result = createOrderSchema.safeParse(req.body)
+
+  // validate input data
+  if (!result.success) {
+    console.error('Input validation failed: ', result.error)
+    return res.status(400).json({
+      status: 'failed',
+      message: 'Invalid input data. Please check and try again.',
+    })
+  }
+
+  const { selectedCartItemIds } = result.data
+
+  try {
+    // fetch the cart first
+    const [cart] = await db
+      .select()
+      .from(carts)
+      .where(eq(carts.userId, req.user!.userId))
+
+    // maybe cart is empty
+    if (!cart) {
+      return res.json({
+        success: true,
+        message: 'Your cart is empty. add items to place order',
+      })
+    }
+
+    // fetch selected cart items
+    const items = await db
+      .select({
+        cartItemId: cartItems.id,
+        productId: cartItems.productId,
+        quantity: cartItems.quantity,
+        productName: products.name,
+        productPrice: products.price,
+        productStock: products.stockQuantity,
+      })
+      .from(cartItems)
+      .innerJoin(products, eq(cartItems.productId, products.id))
+      .where(
+        selectedCartItemIds.length > 0
+          ? and(
+              eq(cartItems.cartId, cart.id),
+              inArray(cartItems.id, selectedCartItemIds)
+            )
+          : eq(cartItems.cartId, cart.id)
+      )
+
+    if (items.length === 0) {
+      return res.status(404).json({
+        message: 'Items not found in cart',
+      })
+    }
+
+    // verify stock
+    for (const item of items) {
+      if (item.quantity > item.productStock) {
+        return res
+          .status(400)
+          .json({ message: `Not enough stock for ${item.productName}` })
+      }
+    }
+
+    // calculate subtotal
+    const totalAmount = items.reduce(
+      (sum, i) => sum + i.quantity * i.productPrice,
+      0
+    )
+
+    // begin the db transaction
+    await db.transaction(async tx => {
+      // create order first
+      const [order] = await tx
+        .insert(orders)
+        .values({
+          userId: req.user!.userId,
+          totalAmount,
+          status: 'CREATED',
+        })
+        .returning()
+
+      // create order items
+      for (const e of items) {
+        await tx.insert(orderItems).values({
+          orderId: order.id,
+          productId: e.productId,
+          productName: e.productName,
+          productPrice: e.productPrice,
+          quantity: e.quantity,
+          subtotal: e.quantity * e.productPrice,
+        })
+      }
+
+      // decrease product stock
+      for (const e of items) {
+        const result = await tx
+          .update(products)
+          .set({
+            stockQuantity: sql`${products.stockQuantity} - ${e.quantity}`,
+          })
+          .where(
+            and(
+              eq(products.id, e.productId),
+              gte(products.stockQuantity, e.quantity) // ensures enough stock
+            )
+          )
+          .returning({ updatedId: products.id })
+
+        // Check if update actually happened
+        if (result.length === 0) {
+          throw new Error(`Insufficient stock for product: ${e.productName}`)
+        }
+      }
+
+      // clear ordered items from cart
+      if (selectedCartItemIds.length > 0) {
+        await tx
+          .delete(cartItems)
+          .where(
+            and(
+              eq(cartItems.cartId, cart.id),
+              inArray(cartItems.id, selectedCartItemIds)
+            )
+          )
+      } else {
+        await tx.delete(cartItems).where(eq(cartItems.cartId, cart.id))
+      }
+    })
+
+    // send mail -> later
+
+    res.status(201).json({
+      success: true,
+      message: 'Order placed successfully!',
+    })
+  } catch (error) {
+    console.error('Error placing order: ', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}

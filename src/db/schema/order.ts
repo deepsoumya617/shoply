@@ -2,7 +2,7 @@ import { integer, pgTable, uuid, pgEnum, timestamp } from 'drizzle-orm/pg-core'
 import { users } from './user'
 
 // order status enum
-const ordersEnum = pgEnum('order_status', [
+export const ordersEnum = pgEnum('order_status', [
   'CREATED',
   'AWAITING_PAYMENT',
   'PAID',
@@ -14,7 +14,7 @@ const ordersEnum = pgEnum('order_status', [
 
 // orders table -> not completed fully
 export const orders = pgTable('orders', {
-  id: uuid('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id')
     .notNull()
     .references(() => users.id),

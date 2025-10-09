@@ -1,7 +1,7 @@
 import { pgEnum, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 // enums for categories
-export const categoriesEnum = pgEnum('category_name', [
+const categoriesEnum = pgEnum('category_name', [
   'Electronics',
   'Mobiles',
   'Laptops',

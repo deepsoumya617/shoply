@@ -22,3 +22,9 @@ export const cartQueue = new Queue('cart', {
   connection: redis,
   defaultJobOptions: DEFAULT_JOB_OPTIONS,
 })
+
+// order queue
+export const orderQueue = new Queue('order', {
+  connection: redis,
+  defaultJobOptions: DEFAULT_JOB_OPTIONS,
+})

@@ -27,7 +27,6 @@ export async function enqueueCartJobs(cartId: string, email: string) {
       jobId: `reminder1:${cartId}`, // unique id to avoid duplicates
       delay: 1 * MS.day,
       //   delay: 10 * 1000, // for testing
-      removeOnComplete: true,
     }
   )
 
@@ -38,7 +37,6 @@ export async function enqueueCartJobs(cartId: string, email: string) {
     {
       jobId: `reminder2:${cartId}`,
       delay: 3 * MS.day,
-      removeOnComplete: true,
     }
   )
 
@@ -49,7 +47,6 @@ export async function enqueueCartJobs(cartId: string, email: string) {
     {
       jobId: `delete:${cartId}`,
       delay: 7 * MS.day,
-      removeOnComplete: true,
     }
   )
 }

@@ -84,7 +84,6 @@ export async function createOrder(req: AuthRequest, res: Response) {
         .values({
           userId: req.user!.userId,
           totalAmount,
-          status: 'CREATED',
         })
         .returning()
 

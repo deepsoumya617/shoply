@@ -17,9 +17,11 @@ A scalable RESTful eCommerce 🛒 backend API built with `Node.js`, `Express`, a
 - **Background Jobs** for sending emails.
 - **User** routes
 - **caching** frequently accessed(*category*) data with `redis`
+- **cart** module(for logged in users)
+- **order** module
 
 ### ⏳ Ongoing
-- **cart** features
+- **payment** and **tracking**
 - **testing** `auth`, `product` and `user` routes using `vitest` and `supertest`
 - **rate limiting** 
 

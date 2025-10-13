@@ -3,11 +3,8 @@ import { users } from './user'
 
 // order status enum
 export const ordersEnum = pgEnum('order_status', [
-  'CREATED',
   'AWAITING_PAYMENT',
   'PAID',
-  'IN_TRANSIT',
-  'DELIVERED',
   'CANCELLED',
   'REFUNDED',
 ])
@@ -19,7 +16,7 @@ export const orders = pgTable('orders', {
     .notNull()
     .references(() => users.id),
   totalAmount: integer('total_amount').notNull(),
-  status: ordersEnum().notNull().default('CREATED'),
+  orderStatus: ordersEnum().notNull().default('AWAITING_PAYMENT'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 })

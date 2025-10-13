@@ -4,6 +4,7 @@ import { createOrderSchema } from './order.schema'
 import { db } from '../../config/db'
 import { cartItems, carts, orderItems, orders, products } from '../../db/schema'
 import { and, eq, gte, inArray, sql } from 'drizzle-orm'
+import { enqueueCreateOrderJob } from '../../jobs/order.job'
 
 export async function createOrder(req: AuthRequest, res: Response) {
   const result = createOrderSchema.safeParse(req.body)
@@ -76,6 +77,9 @@ export async function createOrder(req: AuthRequest, res: Response) {
       0
     )
 
+    // declare order object to use outside transaction
+    let orderInfo: { id: string; totalAmount: number } | undefined
+
     // begin the db transaction
     await db.transaction(async tx => {
       // create order first
@@ -86,6 +90,9 @@ export async function createOrder(req: AuthRequest, res: Response) {
           totalAmount,
         })
         .returning()
+
+      // save [order] in orderInfo to use later
+      orderInfo = { id: order.id, totalAmount: order.totalAmount }
 
       // create order items
       for (const e of items) {
@@ -135,7 +142,17 @@ export async function createOrder(req: AuthRequest, res: Response) {
       }
     })
 
-    // send mail -> later
+    // check if order is created or not
+    if (!orderInfo) {
+      throw new Error('Order was not created')
+    }
+
+    // send mail
+    await enqueueCreateOrderJob(
+      req.user!.userId,
+      orderInfo.id,
+      orderInfo.totalAmount
+    )
 
     res.status(201).json({
       success: true,

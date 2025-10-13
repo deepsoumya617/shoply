@@ -12,7 +12,7 @@ const DEFAULT_JOB_OPTIONS = {
 }
 
 // email queue
-export const emailQueue = new Queue('email', {
+export const authQueue = new Queue('auth', {
   connection: redis,
   defaultJobOptions: DEFAULT_JOB_OPTIONS,
 })

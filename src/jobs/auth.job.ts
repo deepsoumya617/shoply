@@ -1,11 +1,11 @@
 // producer
-import { emailQueue } from '../config/queue'
+import { authQueue } from '../config/queue'
 
 export async function enqueueVerificationEmail(payload: {
   email: string
   token: string
 }) {
-  await emailQueue.add('send-verification-email', payload)
+  await authQueue.add('send-verification-email', payload)
 }
 
 export async function enqueueLoginEmail(payload: {
@@ -13,16 +13,16 @@ export async function enqueueLoginEmail(payload: {
   ip: string
   deviceInfo: string
 }) {
-  await emailQueue.add('send-login-email', payload)
+  await authQueue.add('send-login-email', payload)
 }
 
 export async function enqueueForgotPasswordEmail(payload: {
   email: string
   token: string
 }) {
-  await emailQueue.add('send-forgotPassword-email', payload)
+  await authQueue.add('send-forgotPassword-email', payload)
 }
 
 export async function enqueueUpdateUserRoleEmail(payload: { userId: string }) {
-  await emailQueue.add('send-updateUserRole-email', payload)
+  await authQueue.add('send-updateUserRole-email', payload)
 }

@@ -9,9 +9,8 @@
     "start:api": "node dist/src/index.js",
     "push": "drizzle-kit push",
     "studio": "drizzle-kit studio",
-    "dev:worker:email": "ts-node-dev --respawn --transpile-only src/workers/email.worker.ts",
-    "dev:worker:cart": "ts-node-dev --respawn --transpile-only src/workers/cart.worker.ts",
-    "start:worker": "node dist/workers/email.worker.js",
+    "dev:worker": "ts-node-dev --respawn --transpile-only src/workers/index.ts",
+    "start:worker": "node dist/workers/index.js",
     "test": "vitest --run"
   },
   "keywords": [],

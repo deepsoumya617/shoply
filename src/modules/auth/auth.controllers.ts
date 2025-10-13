@@ -15,7 +15,7 @@ import {
   enqueueForgotPasswordEmail,
   enqueueLoginEmail,
   enqueueVerificationEmail,
-} from '../../jobs/email.job'
+} from '../../jobs/auth.job'
 import { UAParser } from 'ua-parser-js'
 
 // register user

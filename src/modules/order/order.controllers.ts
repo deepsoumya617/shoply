@@ -163,3 +163,44 @@ export async function createOrder(req: AuthRequest, res: Response) {
     res.status(500).json({ message: 'Internal server error' })
   }
 }
+
+export async function getAllOrders(req: AuthRequest, res: Response) {
+  try {
+    // fetch order
+    const [order] = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.userId, req.user!.userId))
+
+    if (!order) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'There are no active orders.' })
+    }
+
+    // fetch order items
+    const items = await db
+      .select({
+        productName: orderItems.productName,
+        productPrice: orderItems.productPrice,
+        quantity: orderItems.quantity,
+        subtotal: orderItems.subtotal,
+      })
+      .from(orderItems)
+      .where(eq(orderItems.orderId, order.id))
+
+    res.status(200).json({
+      success: true,
+      message: 'Active orders are fetched successfully.',
+      order: {
+        orderId: order.id,
+        orderStatus: order.orderStatus,
+        totalAmount: order.totalAmount,
+        items,
+      },
+    })
+  } catch (error) {
+    console.error('Error placing order: ', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}

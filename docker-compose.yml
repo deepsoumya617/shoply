@@ -65,6 +65,7 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - DATABASE_URL=${DATABASE_URL_DOCKER}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - EMAIL_HOST=${EMAIL_HOST}
       - EMAIL_PORT=${EMAIL_PORT}

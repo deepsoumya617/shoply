@@ -1,10 +1,14 @@
 import { Response } from 'express'
 import { AuthRequest } from '../../middlewares/auth.middleware'
-import { createOrderSchema } from './order.schema'
+import { createOrderSchema, orderIdSchema } from './order.schema'
 import { db } from '../../config/db'
 import { cartItems, carts, orderItems, orders, products } from '../../db/schema'
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
-import { enqueueCreateOrderJob } from '../../jobs/order.job'
+import {
+  enqueueCreateOrderJob,
+  enqueuePaymentJob,
+  enqueueShipmentJob,
+} from '../../jobs/order.job'
 
 export async function createOrder(req: AuthRequest, res: Response) {
   const result = createOrderSchema.safeParse(req.body)
@@ -154,6 +158,8 @@ export async function createOrder(req: AuthRequest, res: Response) {
       orderInfo.totalAmount
     )
 
+    console.log(orderInfo)
+
     res.status(201).json({
       success: true,
       message: 'Order placed successfully!',
@@ -213,6 +219,65 @@ export async function getAllOrders(req: AuthRequest, res: Response) {
       success: true,
       message: 'Orders fetched successfully.',
       orderWithItems,
+    })
+  } catch (error) {
+    console.error('Error placing order: ', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+export async function payForOrder(req: AuthRequest, res: Response) {
+  const result = orderIdSchema.safeParse(req.params)
+
+  // validate input data
+  if (!result.success) {
+    console.error('Input validation failed: ', result.error)
+    return res.status(400).json({
+      status: 'failed',
+      message: 'Invalid input data. Please check and try again.',
+    })
+  }
+
+  const { id } = result.data
+
+  try {
+    const [order] = await db.select().from(orders).where(eq(orders.id, id))
+
+    if (!order) {
+      return res.status(404).json({
+        message: 'Order not found.',
+      })
+    }
+
+    // check if the order is cancelled. refunded or paid
+    const forbiddenMessages = {
+      CANCELLED: 'The order is cancelled. You can’t pay anymore.',
+      PAID: 'The payment has already been completed.',
+      REFUNDED: 'You can’t pay for an order that has been refunded.',
+    }
+
+    if (
+      order.orderStatus !== 'AWAITING_PAYMENT' &&
+      forbiddenMessages[order.orderStatus]
+    ) {
+      return res.status(403).json({
+        message: forbiddenMessages[order.orderStatus],
+      })
+    }
+
+    // process payment
+    await db
+      .update(orders)
+      .set({ orderStatus: 'PAID' })
+      .where(eq(orders.id, order.id))
+
+    // trigger background workers
+    await enqueuePaymentJob(req.user!.email, order.id)
+    await enqueueShipmentJob(req.user!.email, order.id)
+
+    res.status(200).json({
+      success: true,
+      message: 'Payment has been completed succesfully!',
     })
   } catch (error) {
     console.error('Error placing order: ', error)

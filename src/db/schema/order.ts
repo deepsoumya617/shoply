@@ -2,11 +2,19 @@ import { integer, pgTable, uuid, pgEnum, timestamp } from 'drizzle-orm/pg-core'
 import { users } from './user'
 
 // order status enum
-export const ordersEnum = pgEnum('order_status', [
+export const orderStatusEnum = pgEnum('order_status', [
   'AWAITING_PAYMENT',
   'PAID',
   'CANCELLED',
   'REFUNDED',
+])
+
+// tracking status
+export const trackingStatusEnum = pgEnum('tracking_status', [
+  'SHIPPED',
+  'IN_TRANSIT',
+  'OUT_FOR_DELIVERY',
+  'DELIVERED',
 ])
 
 // orders table -> not completed fully
@@ -16,6 +24,7 @@ export const orders = pgTable('orders', {
     .notNull()
     .references(() => users.id),
   totalAmount: integer('total_amount').notNull(),
-  orderStatus: ordersEnum().notNull().default('AWAITING_PAYMENT'),
+  orderStatus: orderStatusEnum().notNull().default('AWAITING_PAYMENT'),
+  trackingStatus: trackingStatusEnum().notNull().default('SHIPPED'),
   createdAt: timestamp('created_at').defaultNow(),
 })

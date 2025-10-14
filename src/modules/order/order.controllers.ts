@@ -3,7 +3,7 @@ import { AuthRequest } from '../../middlewares/auth.middleware'
 import { createOrderSchema } from './order.schema'
 import { db } from '../../config/db'
 import { cartItems, carts, orderItems, orders, products } from '../../db/schema'
-import { and, eq, gte, inArray, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
 import { enqueueCreateOrderJob } from '../../jobs/order.job'
 
 export async function createOrder(req: AuthRequest, res: Response) {
@@ -58,7 +58,7 @@ export async function createOrder(req: AuthRequest, res: Response) {
 
     if (items.length === 0) {
       return res.status(404).json({
-        message: 'Items not found in cart',
+        message: 'Your cart is empty. Add items to place order.',
       })
     }
 
@@ -149,7 +149,7 @@ export async function createOrder(req: AuthRequest, res: Response) {
 
     // send mail
     await enqueueCreateOrderJob(
-      req.user!.userId,
+      req.user!.email,
       orderInfo.id,
       orderInfo.totalAmount
     )
@@ -166,38 +166,53 @@ export async function createOrder(req: AuthRequest, res: Response) {
 
 export async function getAllOrders(req: AuthRequest, res: Response) {
   try {
-    // fetch order
-    const [order] = await db
+    // fetch all orders
+    const allOrders = await db
       .select()
       .from(orders)
       .where(eq(orders.userId, req.user!.userId))
+      .orderBy(desc(orders.createdAt))
 
-    if (!order) {
+    if (allOrders.length === 0) {
       return res
         .status(404)
         .json({ success: false, message: 'There are no active orders.' })
     }
 
-    // fetch order items
-    const items = await db
-      .select({
-        productName: orderItems.productName,
-        productPrice: orderItems.productPrice,
-        quantity: orderItems.quantity,
-        subtotal: orderItems.subtotal,
+    // fetch all order items for all the orders
+    let orderWithItems: {
+      order: (typeof allOrders)[0]
+      items: {
+        productName: string
+        productPrice: number
+        quantity: number
+        subtotal: number
+      }[]
+    }[] = []
+
+    for (const order of allOrders) {
+      // fetch items here
+      const items = await db
+        .select({
+          productName: orderItems.productName,
+          productPrice: orderItems.productPrice,
+          quantity: orderItems.quantity,
+          subtotal: orderItems.subtotal,
+        })
+        .from(orderItems)
+        .where(eq(orderItems.orderId, order.id))
+
+      // push into orderWithItems
+      orderWithItems.push({
+        order,
+        items,
       })
-      .from(orderItems)
-      .where(eq(orderItems.orderId, order.id))
+    }
 
     res.status(200).json({
       success: true,
-      message: 'Active orders are fetched successfully.',
-      order: {
-        orderId: order.id,
-        orderStatus: order.orderStatus,
-        totalAmount: order.totalAmount,
-        items,
-      },
+      message: 'Orders fetched successfully.',
+      orderWithItems,
     })
   } catch (error) {
     console.error('Error placing order: ', error)

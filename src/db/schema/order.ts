@@ -18,5 +18,4 @@ export const orders = pgTable('orders', {
   totalAmount: integer('total_amount').notNull(),
   orderStatus: ordersEnum().notNull().default('AWAITING_PAYMENT'),
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
 })

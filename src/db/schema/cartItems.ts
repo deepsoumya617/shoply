@@ -17,7 +17,7 @@ export const cartItems = pgTable(
       .references(() => carts.id),
     productId: uuid('product_id')
       .notNull()
-      .references(() => products.id),
+      .references(() => products.id, { onDelete: 'set null' }),
     quantity: integer('quantity').notNull().default(1),
     addedAt: timestamp('added_at').defaultNow(),
   },

@@ -51,21 +51,23 @@ export async function enqueueShipmentJob(email: string, orderId: string) {
 
 // for keeping the system healthy
 export async function enqueueOrderCleanupJob() {
-  // cancel orders if not paid within 10 mins of creation
-  await orderQueue.add(
-    'cancel-unpaid-orders',
-    {},
+  // job scheduler for repeatable jobs
+
+  // cancel orders
+  await orderQueue.upsertJobScheduler(
+    'cancel-unpaid-orders-scheduler',
+    { every: 10 * 1000 },
     {
-      repeat: { every: 10 * 60 * 1000 },
+      name: 'cancel-unpaid-orders',
     }
   )
 
-  // cleanup cancelled orders from db
-  await orderQueue.add(
-    'remove-cancelled-orders',
-    {},
+  // delete cancelled orders
+  await orderQueue.upsertJobScheduler(
+    'remove-cancelled-orders-scheduler',
+    { every: 15 * 1000 },
     {
-      repeat: { every: 6 * 60 * 60 * 1000 },
+      name: 'remove-cancelled-orders',
     }
   )
 }

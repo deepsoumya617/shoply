@@ -88,7 +88,7 @@ export function startOrderWorker() {
       // cancel unpaid jobs
       if (job.name === 'cancel-unpaid-orders') {
         const now = new Date()
-        const tenMinsAgo = new Date(now.getTime() - 10 * 60 * 1000)
+        const tenMinsAgo = new Date(now.getTime() - 10 * 1000)
 
         // cancel jobs
         await db

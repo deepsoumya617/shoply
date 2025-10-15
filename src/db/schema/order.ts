@@ -37,5 +37,8 @@ export const orders = pgTable(
     trackingStatus: trackingStatusEnum().notNull().default('SHIPPED'),
     createdAt: timestamp('created_at').defaultNow(),
   },
-  table => [index('idx_orders_order_status').on(table.orderStatus)]
+  table => [
+    index('idx_orders_order_status').on(table.orderStatus),
+    index('idx_orders_created_at').on(table.createdAt),
+  ]
 )

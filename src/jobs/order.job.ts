@@ -48,3 +48,24 @@ export async function enqueueShipmentJob(email: string, orderId: string) {
     { delay: 1000 * 60 }
   )
 }
+
+// for keeping the system healthy
+export async function enqueueOrderCleanupJob() {
+  // cancel orders if not paid within 10 mins of creation
+  await orderQueue.add(
+    'cancel-unpaid-orders',
+    {},
+    {
+      repeat: { every: 10 * 60 * 1000 },
+    }
+  )
+
+  // cleanup cancelled orders from db
+  await orderQueue.add(
+    'remove-cancelled-orders',
+    {},
+    {
+      repeat: { every: 6 * 60 * 60 * 1000 },
+    }
+  )
+}

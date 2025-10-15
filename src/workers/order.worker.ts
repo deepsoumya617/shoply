@@ -1,8 +1,8 @@
 import { Job, Worker } from 'bullmq'
 import redis from '../config/redis'
 import { db } from '../config/db'
-import { orderItems } from '../db/schema'
-import { eq } from 'drizzle-orm'
+import { orderItems, orders } from '../db/schema'
+import { and, eq, lt } from 'drizzle-orm'
 import { sendMail } from '../services/mail.service'
 
 export function startOrderWorker() {
@@ -81,6 +81,34 @@ export function startOrderWorker() {
         `
 
         await sendMail({ to: email, subject: 'Order update', html })
+
+        return { status: 'success' }
+      }
+
+      // cancel unpaid jobs
+      if (job.name === 'cancel-unpaid-orders') {
+        const now = new Date()
+        const tenMinsAgo = new Date(now.getTime() - 10 * 60 * 1000)
+
+        // cancel jobs
+        await db
+          .update(orders)
+          .set({
+            orderStatus: 'CANCELLED',
+          })
+          .where(
+            and(
+              eq(orders.orderStatus, 'AWAITING_PAYMENT'),
+              lt(orders.createdAt, tenMinsAgo)
+            )
+          )
+
+        return { status: 'success' }
+      }
+
+      // delete cancelled jobs in every 6 hours
+      if (job.name === 'remove-cancelled-orders') {
+        await db.delete(orders).where(eq(orders.orderStatus, 'CANCELLED'))
 
         return { status: 'success' }
       }

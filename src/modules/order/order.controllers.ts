@@ -221,7 +221,7 @@ export async function getAllOrders(req: AuthRequest, res: Response) {
       orderWithItems,
     })
   } catch (error) {
-    console.error('Error placing order: ', error)
+    console.error('Error getting all orders: ', error)
     res.status(500).json({ message: 'Internal server error' })
   }
 }
@@ -281,6 +281,95 @@ export async function payForOrder(req: AuthRequest, res: Response) {
     })
   } catch (error) {
     console.error('Error placing order: ', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+export async function trackOrder(req: AuthRequest, res: Response) {
+  const result = orderIdSchema.safeParse(req.params)
+
+  // validate input data
+  if (!result.success) {
+    console.error('Input validation failed: ', result.error)
+    return res.status(400).json({
+      status: 'failed',
+      message: 'Invalid input data. Please check and try again.',
+    })
+  }
+
+  const { id } = result.data
+
+  try {
+    const [order] = await db
+      .select({
+        trackingStatus: orders.trackingStatus,
+      })
+      .from(orders)
+      .where(eq(orders.id, id))
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' })
+    }
+
+    res.status(200).json({
+      success: true,
+      trackingStatus: order.trackingStatus,
+    })
+  } catch (error) {
+    console.error('Error tracking order: ', error)
+    res.status(500).json({
+      message: 'Internal server error',
+    })
+  }
+}
+
+export async function getOrderByID(req: AuthRequest, res: Response) {
+  const result = orderIdSchema.safeParse(req.params)
+
+  // validate input data
+  if (!result.success) {
+    console.error('Input validation failed: ', result.error)
+    return res.status(400).json({
+      status: 'failed',
+      message: 'Invalid input data. Please check and try again.',
+    })
+  }
+
+  const { id } = result.data
+
+  try {
+    const [order] = await db.select().from(orders).where(eq(orders.id, id))
+
+    if (!order) {
+      return res.status(404).json({
+        message: 'Order not found',
+      })
+    }
+
+    // fetch items
+    const items = await db
+      .select({
+        productName: orderItems.productName,
+        productPrice: orderItems.productPrice,
+        quantity: orderItems.quantity,
+        subtotal: orderItems.subtotal,
+      })
+      .from(orderItems)
+      .where(eq(orderItems.orderId, order.id))
+
+    // merge into one
+    const orderWithItems: {
+      order: typeof order
+      items: typeof items
+    } = { order, items }
+
+    res.status(200).json({
+      success: true,
+      message: 'Order fetched successfully.',
+      orderWithItems,
+    })
+  } catch (error) {
+    console.error(`Error getting order with orderid ${id}: `, error)
     res.status(500).json({ message: 'Internal server error' })
   }
 }

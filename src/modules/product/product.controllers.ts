@@ -6,9 +6,10 @@ import {
   updateProductSchema,
 } from './product.schema'
 import { db } from '../../config/db'
-import { categories, products } from '../../db/schema'
+import { categories, productImages, products } from '../../db/schema'
 import { eq, count, desc } from 'drizzle-orm'
 import redis from '../../config/redis'
+import { enqueueImageUploadJob } from '../../jobs/image.job'
 
 export async function createProduct(req: Request, res: Response) {
   const result = createProductSchema.safeParse(req.body)
@@ -296,5 +297,49 @@ export async function getAllCategories(req: Request, res: Response) {
       success: false,
       message: 'Internal server error while fetching categories',
     })
+  }
+}
+
+export async function uploadProductImage(req: Request, res: Response) {
+  const result = productIdSchema.safeParse(req.params)
+
+  // validate id
+  if (!result.success) {
+    console.error('Invalid ID: ', result.error)
+    return res.status(403).json({
+      status: 'failed',
+      message: 'Invalid product id. Please check and try again.',
+    })
+  }
+
+  const { id } = result.data
+  const files = req.files as Express.Multer.File[] | undefined
+
+  if (!files || files.length === 0) {
+    return res.status(400).json({ error: 'No files provided' })
+  }
+
+  try {
+    // check if there already 3 imgs for a product in db
+    const rows = await db
+      .select()
+      .from(productImages)
+      .where(eq(productImages.productId, id))
+
+    if (rows.length + files.length > 3) {
+      return res
+        .status(400)
+        .json({ message: 'Each product can have upto 3 images.' })
+    }
+
+    // upload every image through workers
+    for (const file of files) {
+      await enqueueImageUploadJob({ productId: id, fileBuffer: file.buffer })
+    }
+
+    return res.status(200).json({ message: 'Images are queued for upload' })
+  } catch (error) {
+    console.error('Error uploading images: ', error)
+    res.status(500).json({ message: 'Internal server error' })
   }
 }

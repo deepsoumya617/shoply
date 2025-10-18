@@ -28,3 +28,9 @@ export const orderQueue = new Queue('order', {
   connection: redis,
   defaultJobOptions: DEFAULT_JOB_OPTIONS,
 })
+
+// image queue
+export const imageQueue = new Queue('image-upload', {
+  connection: redis,
+  defaultJobOptions: DEFAULT_JOB_OPTIONS,
+})

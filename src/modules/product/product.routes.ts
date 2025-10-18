@@ -7,10 +7,12 @@ import {
   getProductByCategories,
   getProductById,
   updateProductById,
+  uploadProductImage,
 } from './product.controllers'
 import { sellerMiddleware } from '../../middlewares/seller.middleware'
 import { authMiddleware } from '../../middlewares/auth.middleware'
 import { adminOrSellerMiddleware } from '../../middlewares/adminOrSeller.middleware'
+import { upload } from '../../config/multer'
 
 const productRouter = Router()
 
@@ -31,5 +33,11 @@ productRouter.delete(
   adminOrSellerMiddleware,
   deleteProductById
 )
-
+productRouter.post(
+  '/:id/upload-image',
+  authMiddleware,
+  sellerMiddleware,
+  upload.array('images', 3),
+  uploadProductImage
+)
 export default productRouter

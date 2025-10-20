@@ -7,8 +7,10 @@ import {
 } from './cart.controllers'
 import { authMiddleware } from '../../middlewares/auth.middleware'
 import { customerMiddleware } from '../../middlewares/customer.middleware'
+import { cartLimiter } from '../../middlewares/ratelimit.middleware'
 
 const cartRouter = Router()
+cartRouter.use(cartLimiter)
 
 // check if user is a customer or not using customerMiddlewar
 cartRouter.use(authMiddleware, customerMiddleware)

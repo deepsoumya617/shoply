@@ -8,8 +8,11 @@ import {
   payForOrder,
   trackOrder,
 } from './order.controllers'
+import { orderLimiter } from '../../middlewares/ratelimit.middleware'
 
 const orderRouter = Router()
+
+orderRouter.use(orderLimiter)
 
 // only authenticated CUSTOMERS can place orders
 orderRouter.use(authMiddleware, customerMiddleware)

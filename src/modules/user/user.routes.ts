@@ -8,8 +8,11 @@ import {
   updateUserRole,
 } from './user.controllers'
 import { authMiddleware } from '../../middlewares/auth.middleware'
+import { userLimiter } from '../../middlewares/ratelimit.middleware'
 
 const userRouter = Router()
+
+userRouter.use(userLimiter)
 
 // middleware
 userRouter.use(authMiddleware)

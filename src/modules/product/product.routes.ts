@@ -13,16 +13,22 @@ import { sellerMiddleware } from '../../middlewares/seller.middleware'
 import { authMiddleware } from '../../middlewares/auth.middleware'
 import { adminOrSellerMiddleware } from '../../middlewares/adminOrSeller.middleware'
 import { upload } from '../../config/multer'
+import {
+  productLimiter,
+  uploadLimiter,
+} from '../../middlewares/ratelimit.middleware'
 
 const productRouter = Router()
+
+productRouter.use(productLimiter)
 
 // product routes
 
 // public route - no auth needed
 productRouter.get('/', getAllProducts)
 productRouter.get('/categories', getAllCategories)
-productRouter.get('/:id', getProductById)
 productRouter.get('/category/:id', getProductByCategories)
+productRouter.get('/:id', getProductById)
 
 // protected routes
 productRouter.post('/', authMiddleware, sellerMiddleware, createProduct)
@@ -35,6 +41,7 @@ productRouter.delete(
 )
 productRouter.post(
   '/:id/upload-image',
+  uploadLimiter,
   authMiddleware,
   sellerMiddleware,
   upload.array('images', 3),

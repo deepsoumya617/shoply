@@ -17,6 +17,165 @@ import {
   enqueueVerificationEmail,
 } from '../../jobs/auth.job'
 import { UAParser } from 'ua-parser-js'
+import { googleClient } from '../../config/googleClient'
+import { env } from '../../config/env'
+
+// sign in with google
+export async function googleAuth(req: Request, res: Response) {
+  try {
+    // make a random state for csrf protection
+    const state = crypto.randomBytes(16).toString('hex')
+
+    // store in cookie
+    res.cookie('oauth_state', state, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      maxAge: 5 * 60 * 1000,
+    })
+
+    // generate google auth url
+    const redirectUrl = googleClient.generateAuthUrl({
+      access_type: 'offline',
+      prompt: 'consent',
+      scope: [
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'openid',
+      ],
+      state,
+    })
+
+    return res.redirect(redirectUrl)
+  } catch (error) {
+    console.error('Google OAuth redirect failed: ', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+export async function googleAuthCallback(req: Request, res: Response) {
+  const code = req.query.code as string
+  const state = req.query.state as string
+  const storedState = req.cookies.oauth_state as string
+
+  if (!code || !state) {
+    return res
+      .status(400)
+      .json({ message: 'Missing authorization code or state' })
+  }
+
+  // states didnt match
+  if (state !== storedState) {
+    return res.status(403).json({ message: 'Invalid state parameter' })
+  }
+
+  // clear the cookie
+  res.clearCookie('oauth_state')
+
+  try {
+    // exchange the code for token
+    const { tokens } = await googleClient.getToken(code)
+    const idToken = tokens.id_token
+
+    if (!idToken) {
+      return res.status(400).json({ message: 'Missing ID token from Google' })
+    }
+
+    // verify idToken
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: env.GOOGLE_CLIENT_ID,
+    })
+
+    const payload = ticket.getPayload()
+
+    if (!payload) {
+      return res.status(400).json({ message: 'Invalid Google token' })
+    }
+
+    if (!payload.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email not available from Google account',
+      })
+    }
+
+    const email = payload.email
+    const firstName =
+      payload.given_name || `user${crypto.randomInt(10000, 99999)}`
+      
+    // check if user exists
+    let [user] = await db.select().from(users).where(eq(users.email, email))
+
+    // checks if user exist but uses email+password based login
+    if (user && user.authProvider === 'email') {
+      return res.status(409).json({
+        success: false,
+        message:
+          'An account with this email already exists. Please login with your password.',
+      })
+    }
+
+    // if user doesnt exist, first create user
+    // then log in the user automatically. otherwise,
+    // directly login the user -> generate tokens
+    if (!user) {
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          email,
+          firstName,
+          isVerified: true,
+          authProvider: 'google',
+        })
+        .returning()
+
+      user = newUser
+    }
+
+    // generate tokens
+    const accessToken = generateToken({ userId: user.id })
+    const refreshToken = crypto.randomBytes(64).toString('hex')
+    const hashedRefreshToken = hashToken(refreshToken)
+    const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+    // set token in cookie
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    })
+
+    // save hashed refresh token in db
+    await db.insert(refreshTokens).values({
+      userId: user.id,
+      tokenHash: hashedRefreshToken,
+      expiresAt: refreshTokenExpiry,
+    })
+
+    // send login alert email
+    const ip = req.ip || 'Unknown IP'
+    const userAgent = req.headers['user-agent']
+    const parser = new UAParser(userAgent)
+    const deviceInfo = `${parser.getBrowser().name} on ${parser.getOS().name}`
+
+    await enqueueLoginEmail({ email, ip, deviceInfo })
+
+    res.status(200).json({
+      message:
+        'Login successful! Save the token securely. You can access the token from your email too!',
+      accessToken,
+      user: {
+        name: user.firstName,
+        email: user.email,
+      },
+    })
+  } catch (error) {
+    console.error('Login error:', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
 
 // register user
 export async function registerUser(req: Request, res: Response) {
@@ -142,8 +301,17 @@ export async function loginUser(req: Request, res: Response) {
         .json({ message: `user with ${email} doesnt exist!` })
     }
 
+    // user exists -> but loggedin with google
+    if (user && user.authProvider === 'google') {
+      return res.status(400).json({
+        success: false,
+        message:
+          'You used Google as your auth provider. Please sign in with Google.',
+      })
+    }
+
     // user exists -> compare password
-    const isPasswordValid = await comparePassword(password, user.password)
+    const isPasswordValid = await comparePassword(password, user.password!)
 
     // wrong password
     if (!isPasswordValid) {
@@ -321,7 +489,7 @@ export async function refreshAccessToken(req: Request, res: Response) {
 
   // hash the token
   const hashedToken = hashToken(refreshToken)
-  console.log(hashedToken)
+  // console.log(hashedToken)
 
   try {
     // find in db

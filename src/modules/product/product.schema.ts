@@ -51,4 +51,8 @@ export const getProductsSchema = z.object({
     .min(1, 'Limit must be 1 or more')
     .max(10, 'Limit must be less than or equal to 10')
     .default(5),
+  search: z.string().optional(),
+  category: z.string().optional(),
+  minPrice: z.coerce.number().optional(),
+  maxPrice: z.coerce.number().optional(),
 })

@@ -103,7 +103,7 @@ export async function googleAuthCallback(req: Request, res: Response) {
     const email = payload.email
     const firstName =
       payload.given_name || `user${crypto.randomInt(10000, 99999)}`
-      
+
     // check if user exists
     let [user] = await db.select().from(users).where(eq(users.email, email))
 
@@ -216,6 +216,7 @@ export async function registerUser(req: Request, res: Response) {
         lastName,
         email,
         password: hashedPassword,
+        authProvider: 'email',
         verificationToken,
       })
       .returning()

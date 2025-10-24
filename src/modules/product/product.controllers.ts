@@ -7,7 +7,7 @@ import {
 } from './product.schema'
 import { db } from '../../config/db'
 import { categories, productImages, products } from '../../db/schema'
-import { eq, count, desc } from 'drizzle-orm'
+import { eq, count, desc, gte, lte, or, ilike, and } from 'drizzle-orm'
 import redis from '../../config/redis'
 import { enqueueImageUploadJob } from '../../jobs/image.job'
 
@@ -63,10 +63,28 @@ export async function getAllProducts(req: Request, res: Response) {
     })
   }
 
-  const { page, limit } = result.data
+  const { page, limit, category, search, minPrice, maxPrice } = result.data
   const offset = (page - 1) * limit
 
   try {
+    // build the combined query
+    const conditions: any[] = []
+
+    if (category) conditions.push(eq(categories.name, category as any))
+    if (minPrice) conditions.push(gte(products.price, minPrice))
+    if (maxPrice) conditions.push(lte(products.price, maxPrice))
+    if (search) {
+      conditions.push(
+        or(
+          ilike(products.name, `%${search}%`),
+          ilike(products.description, `%${search}%`)
+        )
+      )
+    }
+
+    const combinedConditions =
+      conditions.length > 0 ? and(...conditions) : undefined
+
     // get total no of products
     const result = await db.select({ count: count() }).from(products)
     const rowCount = result[0].count
@@ -82,8 +100,17 @@ export async function getAllProducts(req: Request, res: Response) {
     }
 
     const allProducts = await db
-      .select()
+      .select({
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        price: products.price,
+        stock: products.stockQuantity,
+        category: categories.name,
+      })
       .from(products)
+      .innerJoin(categories, eq(products.categoryId, categories.id))
+      .where(combinedConditions)
       .orderBy(desc(products.createdAt))
       .limit(limit)
       .offset(offset)
